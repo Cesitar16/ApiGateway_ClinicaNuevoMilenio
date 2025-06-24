@@ -22,19 +22,22 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-            .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                // Permitir acceso público a rutas GET y POST definidas
-                .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
-                .requestMatchers(HttpMethod.POST, PUBLIC_POST).permitAll()
+                .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> auth
+                        // Usamos tus constantes para las rutas públicas. ¡Esto está perfecto!
+                        .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
+                        .requestMatchers(HttpMethod.POST, PUBLIC_POST).permitAll()
 
-                // Cualquier otra solicitud requiere autenticación
-                .anyRequest().authenticated()
-            )
-            // Añadir filtro JWT antes del filtro de autenticación de usuario y contraseña
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-            .build();
+                        // Añadimos la nueva regla específica para el proxy de usuarios
+                        .requestMatchers("/api/proxy/usuarios/**").hasRole("ADMINISTRATIVO")
+
+                        // Y finalmente, cualquier otra petición requiere autenticación
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
+                .build();
     }
+
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
