@@ -31,15 +31,17 @@ public class SecurityConfig {
 
                         // 2. Regla para Administrar Usuarios (sin cambios)
                         .requestMatchers("/api/proxy/usuarios/**").hasRole("ADMINISTRATIVO")
+                        .requestMatchers("/api/proxy/reservas/").hasRole("ADMINISTRATIVO")
 
                         // 3. --- NUEVA REGLA PARA RESERVAS ---
                         // Permitimos a Cirujanos y Administrativos gestionar reservas.
                         // Usamos hasAnyRole para permitir múltiples roles.
                         .requestMatchers("/api/proxy/reservas/**").hasAnyRole("ADMINISTRATIVO", "MEDICO")
-
+                        .requestMatchers("/api/proxy/imagenes/**").hasAnyRole("MEDICO")
                         // 4. --- NUEVA REGLA PARA PABELLONES ---
                         // Cualquier usuario autenticado puede ver/interactuar con los pabellones.
                         .requestMatchers("/api/proxy/pabellones/**").authenticated()
+
 
                         // 5. Cualquier otra petición no definida anteriormente requiere autenticación.
                         .anyRequest().authenticated()
