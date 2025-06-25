@@ -37,7 +37,11 @@ public class SecurityConfig {
                         // Permitimos a Cirujanos y Administrativos gestionar reservas.
                         // Usamos hasAnyRole para permitir múltiples roles.
                         .requestMatchers("/api/proxy/reservas/**").hasAnyRole("ADMINISTRATIVO", "MEDICO")
+
                         .requestMatchers("/api/proxy/imagenes/**").hasAnyRole("MEDICO")
+
+
+
                         // 4. --- NUEVA REGLA PARA PABELLONES ---
                         // Cualquier usuario autenticado puede ver/interactuar con los pabellones.
                         .requestMatchers("/api/proxy/pabellones/**").authenticated()
