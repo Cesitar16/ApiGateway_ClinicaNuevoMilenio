@@ -47,6 +47,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/proxy/pabellones/**").authenticated()
 
 
+                        .requestMatchers("/api/proxy/equipamiento/**").hasAnyRole("ADMINISTRATIVO", "INSTUMENTISTA")
+                        .requestMatchers("/apu/proxy/equipamiento//stock/pabellon/{pabellonId}/equipo/{equipamientoId}").hasAnyRole("JEFE DE PABELLON", "MEDICO")
+
                         // 5. Cualquier otra petición no definida anteriormente requiere autenticación.
                         .anyRequest().authenticated()
                 )
