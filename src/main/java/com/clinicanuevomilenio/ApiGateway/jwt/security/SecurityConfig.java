@@ -11,6 +11,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.http.HttpMethod;
 
+// Importamos las constantes estáticas de tu clase
 import static com.clinicanuevomilenio.ApiGateway.jwt.security.PublicRoutes.*;
 
 @Configuration
@@ -24,20 +25,28 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // Usamos tus constantes para las rutas públicas. ¡Esto está perfecto!
+                        // 1. Rutas Públicas (sin cambios)
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_POST).permitAll()
 
-                        // Añadimos la nueva regla específica para el proxy de usuarios
+                        // 2. Regla para Administrar Usuarios (sin cambios)
                         .requestMatchers("/api/proxy/usuarios/**").hasRole("ADMINISTRATIVO")
 
-                        // Y finalmente, cualquier otra petición requiere autenticación
+                        // 3. --- NUEVA REGLA PARA RESERVAS ---
+                        // Permitimos a Cirujanos y Administrativos gestionar reservas.
+                        // Usamos hasAnyRole para permitir múltiples roles.
+                        .requestMatchers("/api/proxy/reservas/**").hasAnyRole("ADMINISTRATIVO", "MEDICO")
+
+                        // 4. --- NUEVA REGLA PARA PABELLONES ---
+                        // Cualquier usuario autenticado puede ver/interactuar con los pabellones.
+                        .requestMatchers("/api/proxy/pabellones/**").authenticated()
+
+                        // 5. Cualquier otra petición no definida anteriormente requiere autenticación.
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
-
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
