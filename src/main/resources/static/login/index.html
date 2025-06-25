@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Clinica Nuevo Milenio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .form-container { position: relative; width: 100%; height: 550px; overflow: hidden; }
+        .form-section { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out; backface-visibility: hidden; }
+        #register-form-container { transform: translateX(100%); opacity: 0; }
+        .form-container.active #login-form-container { transform: translateX(-100%); opacity: 0; }
+        .form-container.active #register-form-container { transform: translateX(0); opacity: 1; }
+        .form-scroll-area { height: calc(100% - 150px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: #3b82f6 #e5e7eb; }
+        .form-scroll-area::-webkit-scrollbar { width: 8px; }
+        .form-scroll-area::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 4px; }
+        .form-scroll-area::-webkit-scrollbar-thumb { background-color: #3b82f6; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gray-200 font-sans">
+    <svg class="absolute w-0 h-0">
+        <defs>
+            <clipPath id="puzzleClipPath" clipPathUnits="objectBoundingBox">
+                <path d="M0.25,0 L1,0 L1,1 L0.25,1 C0.35,0.85,0.05,0.75,0.25,0.7 C-0.05,0.65,0.1,0.55,0.25,0.5 C0.1,0.45,-0.05,0.35,0.25,0.3 C0.15,0.25,0.35,0.15,0.25,0 Z"></path>
+            </clipPath>
+        </defs>
+    </svg>
+
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="w-full max-w-6xl flex flex-row rounded-2xl shadow-2xl overflow-hidden bg-white">
+            <div class="w-full lg:w-1/2 p-8 sm:p-12 flex flex-col justify-center">
+                <div id="form-wrapper" class="form-container">
+                    <div id="login-form-container" class="form-section">
+                        <h1 class="text-3xl font-bold text-gray-800">Login</h1>
+                        <h2 class="text-xl text-gray-600 mb-8">Clinica Nuevo Milenio</h2>
+                        <form id="login-form" class="space-y-5">
+                            <div class="relative">
+                                <input type="text" id="login-username" required placeholder=" " class="block w-full px-4 py-3 bg-gray-100 rounded-full text-gray-700 peer focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                                <label for="login-username" class="absolute text-gray-500 duration-300 transform -translate-y-4 scale-75 top-4 z-10 origin-[0] left-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-4">Username</label>
+                            </div>
+                            <div class="relative">
+                                <input type="password" id="login-password" required placeholder=" " class="block w-full px-4 py-3 bg-gray-100 rounded-full text-gray-700 peer focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                                <label for="login-password" class="absolute text-gray-500 duration-300 transform -translate-y-4 scale-75 top-4 z-10 origin-[0] left-4 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-4">Password</label>
+                            </div>
+                            <div id="login-error-message" class="text-red-500 text-sm text-center hidden"></div>
+                            <a href="#" class="block text-sm text-blue-500 hover:underline text-right font-semibold">Forgot your password?</a>
+                            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-full mt-6 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/40">Login</button>
+                        </form>
+                        <p class="text-center text-gray-600 mt-6">
+                            Don't have an account? 
+                            <button id="show-register-btn" class="text-blue-500 hover:underline font-semibold">Create Account</button>
+                        </p>
+                    </div>
+                    
+                    <div id="register-form-container" class="form-section flex flex-col">
+                        <h1 class="text-3xl font-bold text-gray-800 mb-4">Create new account</h1>
+                        <div class="form-scroll-area pr-4">
+                            <form action="" id="registerForm" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                                <div class="relative md:col-span-2"><input type="number" placeholder=" " required class="input-float"><label class="label-float">RUT (sin puntos ni guión)</label></div>
+                                <div class="relative"><input type="text" placeholder=" " required maxlength="1" class="input-float"><label class="label-float">DV</label></div>
+                                <div class="relative"><input type="text" placeholder=" " required class="input-float"><label class="label-float">Primer Nombre</label></div>
+                                <div class="relative"><input type="text" placeholder=" " class="input-float"><label class="label-float">Segundo Nombre</label></div>
+                                <div class="relative"><input type="text" placeholder=" " required class="input-float"><label class="label-float">Apellido Paterno</label></div>
+                                <div class="relative"><input type="text" placeholder=" " required class="input-float"><label class="label-float">Apellido Materno</label></div>
+                                <div class="relative"><input type="text" placeholder=" " required class="input-float"><label class="label-float">Nombre de Usuario</label></div>
+                                <div class="relative md:col-span-2"><input type="email" placeholder=" " required class="input-float"><label class="label-float">Email</label></div>
+                                <div class="relative"><input type="number" placeholder=" " required class="input-float"><label class="label-float">Teléfono</label></div>
+                                <div class="relative"><input type="text" placeholder=" " required class="input-float"><label class="label-float">Especialidad</label></div>
+                                <div class="relative md:col-span-2">
+                                    <select required class="input-float">
+                                        <option value="" disabled selected></option>
+                                        <option value="1">Doctor</option>
+                                        <option value="2">Administrativo</option>
+                                        <option value="3">Instrumentista</option>
+                                    </select>
+                                    <label class="label-float">Rol</label>
+                                </div>
+                                <div class="relative md:col-span-2"><input type="password" placeholder=" " required class="input-float"><label class="label-float">Contraseña</label></div>
+                                <div class="relative md:col-span-2"><input type="password" placeholder=" " required class="input-float"><label class="label-float">Confirmar Contraseña</label></div>
+                            </form>
+                        </div>
+                         <button type="submit" form="registerForm" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-full mt-auto transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/40">Registrarse</button>
+                         <p class="text-center text-gray-600 mt-4">
+                            ¿Ya tienes una cuenta? 
+                            <button id="show-login-btn" class="text-blue-500 hover:underline font-semibold">Iniciar Sesión</button>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="hidden lg:block lg:w-1/2" style="clip-path: url(#puzzleClipPath);">
+                <img src="assets/img/bg-img.jpg" alt="Equipo médico trabajando" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='https://placehold.co/600x900/e2e8f0/64748b?text=Imagen+no+disponible';">
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript para alternar entre formularios -->
+    <script src="assets/js/main.js" defer></script>
+</body>
+</html>
