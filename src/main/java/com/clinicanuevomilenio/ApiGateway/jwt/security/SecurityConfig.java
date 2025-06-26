@@ -26,55 +26,35 @@ public class SecurityConfig {
 
     // --- CADENA DE FILTROS 1: Para el Frontend (PÚBLICA) ---
     @Bean
-    @Order(1)
-    public SecurityFilterChain frontendFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
-                // Se aplica solo a las rutas del frontend
-                .securityMatcher(
-                        "/login/**",
-                        "/VistaPrincipalMedico/**",
-                        "/solicitud-servicio/**",
-                        "/mis-reservas/**",
-                        "/reportar-incidencia/**", // <-- AÑADIDO AQUÍ
-                        "/css/**",
-                        "/js/**",
-                        "/favicon.ico"
-                )
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(auth -> {
-                    // Permite el acceso a todas estas rutas sin autenticación.
-                    auth.anyRequest().permitAll();
-                })
-                .build();
-    }
-
-    // --- CADENA DE FILTROS 2: Para la API (SEGURA) ---
-    @Bean
-    @Order(2)
-    public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
-        return http
-                // Se aplica a todas las rutas de la API
-                .securityMatcher("/api/**")
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Rutas públicas de la API (login/registro)
-                        .requestMatchers("/api/auth/**").permitAll()
+                        // 1. Rutas Públicas y Vistas del Frontend
+                        .requestMatchers(
+                                "/login/**",
+                                "/VistaPrincipalMedico/**",
+                                // --- RUTA CORREGIDA ---
+                                "/VistaPrincipalJefeDePabellon/**", // Permite acceso a todo dentro de esta carpeta
+                                "/api/auth/**"
+                        ).permitAll()
 
-                        // Reglas específicas de roles para el proxy
-                        .requestMatchers("/api/proxy/incidencias/**").hasAnyRole("MEDICO", "ADMINISTRATIVO") // <-- AÑADIDO AQUÍ
+                        // 2. Reglas de API (Proxy)
                         .requestMatchers("/api/proxy/usuarios/**").hasRole("ADMINISTRATIVO")
-                        .requestMatchers(HttpMethod.GET, "/api/proxy/reservas", "/api/proxy/reservas/aprobadas/por-usuario").hasAnyRole("MEDICO", "ADMINISTRATIVO")
-                        .requestMatchers(HttpMethod.POST, "/api/proxy/reservas").hasRole("MEDICO")
-                        .requestMatchers(HttpMethod.PUT, "/api/proxy/reservas/**").hasRole("MEDICO") // Para modificar y cancelar
-                        .requestMatchers("/api/proxy/reservas/**").hasRole("ADMINISTRATIVO") // El admin puede acceder a todo lo demás de reservas
-                        .requestMatchers("/api/proxy/solicitudes/**").hasAnyRole("ADMINISTRATIVO")
+                        .requestMatchers("/api/proxy/reservas/pendientes").hasAnyRole("JEFE DE PABELLON", "ADMINISTRATIVO")
+                        .requestMatchers(HttpMethod.PUT, "/api/proxy/reservas/**").hasAnyRole("JEFE DE PABELLON", "ADMINISTRATIVO", "MEDICO")
+                        .requestMatchers("/api/proxy/reservas/**").hasAnyRole("ADMINISTRATIVO", "MEDICO")
+                        .requestMatchers("/api/proxy/solicitudes/**").hasAnyRole("MEDICO", "ADMINISTRATIVO")
+                        .requestMatchers("/api/proxy/incidencias/**").hasAnyRole("MEDICO", "ADMINISTRATIVO")
                         .requestMatchers("/api/proxy/pabellones/**").hasAnyRole("MEDICO", "ADMINISTRATIVO")
                         .requestMatchers("/api/proxy/equipamiento/**").hasAnyRole("ADMINISTRATIVO", "MEDICO", "INSTRUMENTISTA")
+                        .requestMatchers("/VistaJefeServicios/**", "/gestion-servicios/**").permitAll()
+                        .requestMatchers("/api/proxy/solicitudes-servicio/**").hasAnyRole("JEFE_DE_SERVICIOS", "ADMINISTRATIVO")
+                        .requestMatchers("/api/proxy/usuarios/por-rol").hasAnyRole("JEFE_DE_SERVICIOS", "ADMINISTRATIVO")
 
-                        // Cualquier otra ruta de la API requiere autenticación
+                        // 3. Regla Final
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

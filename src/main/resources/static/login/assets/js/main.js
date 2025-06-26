@@ -24,7 +24,6 @@ document.querySelectorAll('.input-float').forEach(el => el.className = inputBase
 document.querySelectorAll('.label-float').forEach(el => el.className = labelBaseClasses);
 
 
-// --- LÓGICA PARA CONECTAR LOGIN CON LA API ---
 const loginForm = document.getElementById('login-form');
 const loginContainer = document.getElementById('login-form-container');
 const usernameInput = document.getElementById('login-username');
@@ -52,22 +51,23 @@ if (loginForm) {
             if (response.ok) {
                 const data = await response.json();
 
-                   // Guardamos los datos existentes
-                   localStorage.setItem('authToken', data.token);
-                   localStorage.setItem('username', data.nombreUsuario);
-                   localStorage.setItem('userRole', data.rol);
+                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('username', data.nombreUsuario);
+                localStorage.setItem('userRole', data.rol);
+                localStorage.setItem('userId', data.userId);
 
-                   // --- AÑADE ESTA LÍNEA OBLIGATORIAMENTE ---
-                   localStorage.setItem('userId', data.userId);
+                // --- LÓGICA DE REDIRECCIÓN CORREGIDA ---
+                const userRole = data.rol.toUpperCase();
 
-                // --- LÓGICA DE REDIRECCIÓN BASADA EN ROL ---
-                // Comparamos el rol que viene de la API
-                if (data.rol.toUpperCase() === 'MEDICO') {
-                    // Si el rol es MÉDICO, redirigir a su vista principal
-                    // La ruta relativa funciona porque ambas carpetas están dentro de 'static'
+                if (userRole === 'MEDICO') {
                     window.location.href = '../VistaPrincipalMedico/index.html';
-                } else {
-                    // Para cualquier otro rol, mostramos un mensaje de bienvenida.
+
+                } else if (userRole === 'JEFE DE PABELLON') { // <-- CORRECCIÓN: Se usa un espacio en lugar de guion bajo
+                    window.location.href = '../VistaPrincipalJefeDePabellon/gestion-reservas.html';
+
+                } else if (userRole === 'JEFE DE SERVICIOS') { // O el nombre exacto del rol
+                      window.location.href = '../VistaJefeServicios/index.html';
+                  }else {
                     loginContainer.innerHTML = `
                         <div class="text-center p-8 flex flex-col justify-center h-full animate-fade-in-up">
                             <h1 class="text-2xl font-bold text-gray-800">¡Bienvenido, ${data.nombreUsuario}!</h1>
