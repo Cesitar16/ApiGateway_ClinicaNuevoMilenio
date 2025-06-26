@@ -8,8 +8,13 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.http.HttpMethod;
+
+import java.util.Arrays; // <-- Importación necesaria
 
 // Importamos las constantes estáticas de tu clase
 import static com.clinicanuevomilenio.ApiGateway.jwt.security.PublicRoutes.*;
@@ -23,34 +28,25 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Rutas Públicas (sin cambios)
+                        // 1. Rutas Públicas de la API
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_POST).permitAll()
-
-                        // 2. Regla para Administrar Usuarios (sin cambios)
+                        // 2. Permitir acceso a todos los archivos del Front-End
+                        .requestMatchers("/login/**", "/VistaPrincipalMedico/**").permitAll() // Se añade VistaPrincipalMedico
+                        // 3. Reglas específicas para roles
                         .requestMatchers("/api/proxy/usuarios/**").hasRole("ADMINISTRATIVO")
                         .requestMatchers("/api/proxy/reservas/").hasRole("ADMINISTRATIVO")
-
-                        // 3. --- NUEVA REGLA PARA RESERVAS ---
-                        // Permitimos a Cirujanos y Administrativos gestionar reservas.
-                        // Usamos hasAnyRole para permitir múltiples roles.
                         .requestMatchers("/api/proxy/reservas/**").hasAnyRole("ADMINISTRATIVO", "MEDICO")
-
                         .requestMatchers("/api/proxy/imagenes/**").hasAnyRole("MEDICO")
-
-
-
-                        // 4. --- NUEVA REGLA PARA PABELLONES ---
-                        // Cualquier usuario autenticado puede ver/interactuar con los pabellones.
                         .requestMatchers("/api/proxy/pabellones/**").authenticated()
-
+                        .requestMatchers("/api/proxy/pabellones/filtro").hasAnyRole("MEDICO")
+                        .requestMatchers("/api/proxy/pabellones/estado").hasAnyRole("MEDICO")
                         .requestMatchers("/api/proxy/equipamiento/**").hasAnyRole("ADMINISTRATIVO", "INSTUMENTISTA")
                         .requestMatchers("/apu/proxy/equipamiento//stock/pabellon/{pabellonId}/equipo/{equipamientoId}").hasAnyRole("JEFE DE PABELLON", "MEDICO")
-
-
-                        // 5. Cualquier otra petición no definida anteriormente requiere autenticación.
+                        // 4. Cualquier otra petición requiere autenticación
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
@@ -65,5 +61,18 @@ public class SecurityConfig {
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("*")); 
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        
+        return source;
     }
 }
