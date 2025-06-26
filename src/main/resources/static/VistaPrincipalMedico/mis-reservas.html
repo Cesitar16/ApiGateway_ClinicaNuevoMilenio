@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Reservas de Pabellón - Clínica Nuevo Milenio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .modal-body { max-height: 70vh; overflow-y: auto; }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+<div class="flex flex-col min-h-screen">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="../VistaPrincipalMedico/index.html" class="text-2xl font-bold text-blue-600">Clínica Nuevo Milenio</a>
+            <div class="flex items-center space-x-4">
+                <span id="welcome-message" class="text-gray-600 hidden sm:block"></span>
+                <button id="logout-button" class="flex items-center text-gray-500 hover:text-red-600 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    <span class="ml-2 hidden md:block">Cerrar Sesión</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="flex-grow container mx-auto px-6 py-12">
+        <div class="text-left mb-10">
+            <h1 class="text-4xl font-bold text-gray-800">Mis Solicitudes de Reserva</h1>
+            <p class="text-gray-600 mt-2">Aquí puedes ver el historial y estado de todas tus solicitudes.</p>
+        </div>
+
+        <div id="reservas-container" class="space-y-6"></div>
+
+        <div id="no-reservas" class="text-center py-16 hidden">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2z" /></svg>
+            <h3 class="mt-2 text-xl font-semibold text-gray-700">No tienes reservas</h3>
+            <p class="mt-1 text-gray-500">Aún no has solicitado ninguna reserva de pabellón.</p>
+            <div class="mt-6">
+                <a href="../pabellones/pabellones.html" type="button" class="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
+                    <svg class="-ml-0.5 mr-1.5 h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" /></svg>
+                    Solicitar Nueva Reserva
+                </a>
+            </div>
+        </div>
+        <div id="loader" class="text-center py-16">
+            <p class="text-gray-600">Cargando tus reservas...</p>
+        </div>
+    </main>
+</div>
+
+<div id="modificar-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8 transform transition-transform duration-300 -translate-y-10">
+        <div class="flex justify-between items-start">
+            <h2 class="text-3xl font-bold text-gray-900">Modificar Reserva</h2>
+            <button id="close-modificar-modal-button" class="text-gray-400 hover:text-gray-800 text-3xl leading-none">&times;</button>
+        </div>
+        <div class="mt-6 border-t pt-6 modal-body">
+            <form id="modificar-form" class="space-y-4">
+                <input type="hidden" id="modificar-reserva-id" name="reservaId">
+                <input type="hidden" id="modificar-fecha" name="fecha">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Pabellón</label>
+                    <input type="text" id="modificar-pabellon-nombre" class="w-full mt-1 p-2 bg-gray-100 border-gray-300 rounded-lg" readonly>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="modificar-hora-inicio" class="block text-sm font-medium text-gray-700">Hora de Inicio</label>
+                        <input type="time" id="modificar-hora-inicio" name="horaInicio" class="w-full mt-1 p-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <div>
+                        <label for="modificar-hora-termino" class="block text-sm font-medium text-gray-700">Hora de Término</label>
+                        <input type="time" id="modificar-hora-termino" name="horaTermino" class="w-full mt-1 p-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="modificar-motivo" class="block text-sm font-medium text-gray-700">Motivo de la Reserva</label>
+                    <textarea id="modificar-motivo" name="motivo" rows="3" class="w-full mt-1 p-2 border border-gray-300 rounded-lg" required></textarea>
+                </div>
+
+                <div>
+                    <label for="modificar-comentario" class="block text-sm font-medium text-gray-700">Comentario (Opcional)</label>
+                    <textarea id="modificar-comentario" name="comentario" rows="2" class="w-full mt-1 p-2 border border-gray-300 rounded-lg"></textarea>
+                </div>
+
+                <div class="flex items-center">
+                    <input type="checkbox" id="modificar-urgencia" name="urgencia" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    <label for="modificar-urgencia" class="ml-2 block text-sm text-gray-900">Marcar como Urgencia</label>
+                </div>
+
+                <div id="modificar-error-message" class="text-red-600 text-sm hidden p-3 bg-red-100 rounded-lg"></div>
+
+                <div class="mt-8 flex justify-end">
+                    <button type="submit" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition w-full">
+                        Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const token = localStorage.getItem('authToken');
+        const userId = localStorage.getItem('userId');
+        const username = localStorage.getItem('username');
+        const API_BASE_URL = 'http://localhost:8888';
+        let reservasDataCache = [];
+
+        if (!token || !userId) {
+            window.location.href = '../login/index.html';
+            return;
+        }
+
+        const welcomeMsg = document.getElementById('welcome-message');
+        const logoutBtn = document.getElementById('logout-button');
+        const reservasContainer = document.getElementById('reservas-container');
+        const noReservasMsg = document.getElementById('no-reservas');
+        const loader = document.getElementById('loader');
+
+        const modificarModal = document.getElementById('modificar-modal');
+        const closeModificarModalBtn = document.getElementById('close-modificar-modal-button');
+        const modificarForm = document.getElementById('modificar-form');
+        const modificarErrorMessage = document.getElementById('modificar-error-message');
+
+        if (welcomeMsg && username) {
+            welcomeMsg.textContent = `Bienvenido/a, ${username}`;
+        }
+        logoutBtn.addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = '../login/index.html';
+        });
+
+        function formatDateTime(dateTimeString) {
+            const date = new Date(dateTimeString);
+            const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false };
+            return date.toLocaleDateString('es-ES', options).replace(',', '');
+        }
+
+        function getStatusBadge(statusName) {
+            const upperStatus = statusName.toUpperCase();
+            switch (upperStatus) {
+                case 'APROBADA': case 'COMPLETADA': return 'bg-green-100 text-green-800';
+                case 'RECHAZADA': case 'CANCELADA': return 'bg-red-100 text-red-800';
+                case 'PENDIENTE': return 'bg-yellow-100 text-yellow-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        async function cancelarReserva(reservaId) {
+            Swal.fire({
+                title: '¿Estás seguro de cancelar?',
+                text: "No podrás revertir esta acción.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, ¡cancelar!',
+                cancelButtonText: 'No, mantener'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/api/proxy/reservas/${reservaId}/cancelar`, {
+                            method: 'PUT',
+                            headers: { 'Authorization': `Bearer ${token}`, 'X-User-Id': userId }
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({ message: 'No se pudo cancelar la reserva.' }));
+                            throw new Error(errorData.message);
+                        }
+                        Swal.fire('¡Cancelada!', 'Tu reserva ha sido cancelada.', 'success');
+                        cargarMisReservas();
+                    } catch (error) {
+                        Swal.fire('Error', error.message, 'error');
+                    }
+                }
+            });
+        }
+
+        async function finalizarReserva(reservaId) {
+            Swal.fire({
+                title: '¿Confirmar finalización?',
+                text: "Esta acción notificará a los servicios de limpieza/mantenimiento.",
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, finalizar procedimiento',
+                cancelButtonText: 'Aún no'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch(`${API_BASE_URL}/api/proxy/reservas/${reservaId}/finalizar`, {
+                            method: 'PUT',
+                            headers: { 'Authorization': `Bearer ${token}`, 'X-User-Id': userId }
+                        });
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({ message: 'No se pudo finalizar la reserva.' }));
+                            throw new Error(errorData.message);
+                        }
+                        Swal.fire('¡Procedimiento Finalizado!', 'Se ha notificado a los servicios correspondientes.', 'success');
+                        cargarMisReservas();
+                    } catch (error) {
+                        Swal.fire('Error', error.message, 'error');
+                    }
+                }
+            });
+        }
+
+        function abrirModalModificacion(reservaId) {
+            const reserva = reservasDataCache.find(r => r.id == reservaId);
+            if (!reserva) return;
+
+            modificarErrorMessage.classList.add('hidden');
+            modificarForm.reset();
+
+            document.getElementById('modificar-reserva-id').value = reserva.id;
+            document.getElementById('modificar-pabellon-nombre').value = reserva.pabellon.nombre;
+
+            const fecha = reserva.fechaHrInicio.split('T')[0];
+            const horaInicio = reserva.fechaHrInicio.split('T')[1].substring(0, 5);
+            const horaTermino = reserva.fechaHrTermino.split('T')[1].substring(0, 5);
+
+            document.getElementById('modificar-fecha').value = fecha;
+            document.getElementById('modificar-hora-inicio').value = horaInicio;
+            document.getElementById('modificar-hora-termino').value = horaTermino;
+            document.getElementById('modificar-motivo').value = reserva.motivo;
+            document.getElementById('modificar-comentario').value = reserva.comentario || '';
+            document.getElementById('modificar-urgencia').checked = reserva.urgencia;
+
+            modificarModal.classList.remove('hidden');
+            setTimeout(() => {
+                modificarModal.classList.remove('opacity-0');
+                modificarModal.querySelector('.modal-content').classList.remove('-translate-y-10');
+            }, 20);
+        }
+
+        function hideModificarModal() {
+            modificarModal.classList.add('opacity-0');
+            modificarModal.querySelector('.modal-content').classList.add('-translate-y-10');
+            setTimeout(() => modificarModal.classList.add('hidden'), 300);
+        }
+
+        closeModificarModalBtn.addEventListener('click', hideModificarModal);
+
+        modificarForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            modificarErrorMessage.classList.add('hidden');
+
+            const formData = new FormData(modificarForm);
+            const reservaId = formData.get('reservaId');
+            const fecha = document.getElementById('modificar-fecha').value;
+
+            const requestBody = {
+                fechaHrInicio: `${fecha}T${formData.get('horaInicio')}:00`,
+                fechaHrTermino: `${fecha}T${formData.get('horaTermino')}:00`,
+                motivo: formData.get('motivo'),
+                urgencia: formData.get('urgencia') === 'on',
+                comentario: formData.get('comentario')
+            };
+
+            if (requestBody.fechaHrInicio >= requestBody.fechaHrTermino) {
+                modificarErrorMessage.textContent = 'La hora de término debe ser posterior a la de inicio.';
+                modificarErrorMessage.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/proxy/reservas/${reservaId}`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'X-User-Id': userId },
+                    body: JSON.stringify(requestBody)
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: 'Error al procesar la modificación.' }));
+                    throw new Error(errorData.message);
+                }
+                hideModificarModal();
+                Swal.fire('¡Actualizado!', 'La reserva ha sido modificada con éxito.', 'success');
+                cargarMisReservas();
+            } catch (error) {
+                modificarErrorMessage.textContent = error.message;
+                modificarErrorMessage.classList.remove('hidden');
+            }
+        });
+
+        function renderReservas(reservas) {
+            reservasContainer.innerHTML = '';
+            reservas.sort((a, b) => new Date(b.fechaSolicitud) - new Date(a.fechaSolicitud));
+
+            if (reservas.length === 0) {
+                document.getElementById('no-reservas').classList.remove('hidden');
+                return;
+            }
+
+            reservas.forEach(reserva => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl shadow-md overflow-hidden';
+
+                // --- LÓGICA DE BOTONES CORREGIDA Y MEJORADA ---
+                const estadoActual = reserva.estado.nombre.toUpperCase();
+                const isModifiable = ['PENDIENTE', 'APROBADA', 'EN PROCESO'].includes(estadoActual);
+                const isCancelable = ['PENDIENTE', 'APROBADA'].includes(estadoActual);
+                const isFinalizable = estadoActual === 'EN PROCESO';
+
+                card.innerHTML = `
+                    <div class="p-6">
+                        <div class="flex items-center justify-between gap-4">
+                            <h3 class="text-xl font-bold text-gray-800 truncate" title="${reserva.pabellon.nombre}">${reserva.pabellon.nombre}</h3>
+                            <span class="px-3 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${getStatusBadge(reserva.estado.nombre)}">
+                                ${reserva.estado.nombre}
+                            </span>
+                        </div>
+                        <p class="text-gray-600 mt-1 truncate" title="${reserva.motivo}">${reserva.motivo}</p>
+                        <div class="mt-4 border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div><p class="text-gray-500">Inicio:</p><p class="font-semibold text-gray-700">${formatDateTime(reserva.fechaHrInicio)}</p></div>
+                            <div><p class="text-gray-500">Término:</p><p class="font-semibold text-gray-700">${formatDateTime(reserva.fechaHrTermino)}</p></div>
+                            <div><p class="text-gray-500">Solicitud:</p><p class="font-semibold text-gray-700">${formatDateTime(reserva.fechaSolicitud)}</p></div>
+                            ${reserva.fechaConfirmacion ? `<div><p class="text-gray-500">Confirmación/Fin:</p><p class="font-semibold text-gray-700">${formatDateTime(reserva.fechaConfirmacion)}</p></div>` : ''}
+                        </div>
+                        <div class="mt-6 flex justify-end space-x-3">
+                            <button data-reserva-id="${reserva.id}" class="modify-btn px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 ${!isModifiable ? 'opacity-50 cursor-not-allowed' : ''}" ${!isModifiable ? 'disabled' : ''}>Modificar</button>
+                            <button data-reserva-id="${reserva.id}" class="cancel-btn px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 ${!isCancelable ? 'opacity-50 cursor-not-allowed' : ''}" ${!isCancelable ? 'disabled' : ''}>Cancelar</button>
+                            <button data-reserva-id="${reserva.id}" class="finish-btn px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 ${!isFinalizable ? 'opacity-50 cursor-not-allowed' : ''}" ${!isFinalizable ? 'disabled' : ''}>Finalizar</button>
+                        </div>
+                    </div>`;
+                reservasContainer.appendChild(card);
+            });
+
+            // Se vuelven a añadir los event listeners a los botones recién creados
+            document.querySelectorAll('.cancel-btn').forEach(button => {
+                if (!button.disabled) button.addEventListener('click', () => cancelarReserva(button.dataset.reservaId));
+            });
+            document.querySelectorAll('.modify-btn').forEach(button => {
+                if (!button.disabled) button.addEventListener('click', () => abrirModalModificacion(button.dataset.reservaId));
+            });
+            document.querySelectorAll('.finish-btn').forEach(button => {
+                if (!button.disabled) button.addEventListener('click', () => finalizarReserva(button.dataset.reservaId));
+            });
+        }
+
+        async function cargarMisReservas() {
+            loader.classList.remove('hidden');
+            noReservasMsg.classList.add('hidden');
+            reservasContainer.innerHTML = '';
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/proxy/reservas`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'X-User-Id': userId }
+                });
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ message: `Error ${response.status}`}));
+                    throw new Error(errorData.message);
+                }
+                reservasDataCache = await response.json();
+                renderReservas(reservasDataCache);
+            } catch (error) {
+                console.error("Error al cargar las reservas:", error);
+                reservasContainer.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        cargarMisReservas();
+    });
+</script>
+</body>
+</html>

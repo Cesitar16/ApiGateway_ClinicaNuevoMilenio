@@ -51,11 +51,14 @@ if (loginForm) {
 
             if (response.ok) {
                 const data = await response.json();
-                
-                // Guardamos los datos en el almacenamiento local
-                localStorage.setItem('authToken', data.token);
-                localStorage.setItem('username', data.nombreUsuario);
-                localStorage.setItem('userRole', data.rol);
+
+                   // Guardamos los datos existentes
+                   localStorage.setItem('authToken', data.token);
+                   localStorage.setItem('username', data.nombreUsuario);
+                   localStorage.setItem('userRole', data.rol);
+
+                   // --- AÑADE ESTA LÍNEA OBLIGATORIAMENTE ---
+                   localStorage.setItem('userId', data.userId);
 
                 // --- LÓGICA DE REDIRECCIÓN BASADA EN ROL ---
                 // Comparamos el rol que viene de la API
