@@ -12,6 +12,7 @@
         body { font-family: 'Poppins', sans-serif; }
         .modal { transition: opacity 0.25s ease; }
         .modal-content { transition: transform 0.25s ease; }
+        .modal-body { max-height: 70vh; overflow-y: auto; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .loader {
             border: 4px solid rgba(0, 0, 0, .1);
@@ -25,6 +26,153 @@
 </head>
 <body class="bg-gray-50">
 
+
+<div class="flex flex-col min-h-screen">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold text-blue-600">Clínica Nuevo Milenio</a>
+            <div class="flex items-center space-x-4">
+                <span id="welcome-message" class="text-gray-600 hidden sm:block"></span>
+                <button id="logout-button" class="flex items-center text-gray-500 hover:text-red-600 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    <span class="ml-2 hidden md:block">Cerrar Sesión</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="flex-grow container mx-auto px-6 py-12">
+        <div class="text-left mb-10">
+            <h1 class="text-4xl font-bold text-gray-800">Pabellones Disponibles</h1>
+            <p class="text-gray-600 mt-2">Filtre y seleccione un pabellón para ver sus detalles o agendar.</p>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-md mb-10">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+                <div>
+                    <label for="filtro-fecha" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Fecha</label>
+                    <input type="date" id="filtro-fecha" class="w-full bg-gray-100 border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2">
+                </div>
+
+                <div>
+                    <label for="filtro-estado" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Estado</label>
+                    <select id="filtro-estado" class="w-full bg-gray-100 border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2">
+                        <option value="">Todos los estados</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filtro-tipo" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Tipo</label>
+                    <select id="filtro-tipo" class="w-full bg-gray-100 border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 p-2">
+                        <option value="">Todos los tipos</option>
+                    </select>
+                </div>
+                <div class="flex space-x-3">
+                    <button id="filter-button" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300">Filtrar</button>
+                    <button id="clear-filter-button" class="w-full bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-300">Limpiar</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="loader-container" class="flex justify-center items-center h-64">
+            <div class="loader"></div>
+        </div>
+        <div id="pabellones-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+        <div id="no-results" class="text-center py-16 hidden">
+            <h3 class="text-xl font-semibold text-gray-700">No se encontraron pabellones</h3>
+            <p class="text-gray-500 mt-2">Intente ajustar los filtros o límpielos para ver todos los resultados.</p>
+        </div>
+    </main>
+</div>
+
+<div id="details-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
+    <div class="modal-content bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-8 transform -translate-y-10">
+        <div class="flex justify-between items-start">
+            <h2 id="modal-title" class="text-3xl font-bold text-gray-900"></h2>
+            <button id="close-details-modal-button" class="text-gray-400 hover:text-gray-800 text-3xl leading-none">&times;</button>
+        </div>
+        <div class="mt-6 border-t pt-6 modal-body">
+            <p id="modal-description" class="text-gray-600 mb-4"></p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                <div><strong>Sede:</strong> <span id="modal-sede"></span></div>
+                <div><strong>Edificio:</strong> <span id="modal-edificio"></span></div>
+                <div><strong>Piso:</strong> <span id="modal-piso"></span></div>
+                <div><strong>Capacidad:</strong> <span id="modal-capacidad"></span></div>
+                <div class="md:col-span-2"><strong>Tipo:</strong> <span id="modal-tipo"></span></div>
+                <div class="md:col-span-2"><strong>Características:</strong> <span id="modal-caracteristicas"></span></div>
+                <div class="md:col-span-2"><strong>Referencia:</strong> <span id="modal-referencia"></span></div>
+            </div>
+        </div>
+        <div class="mt-8 flex justify-between items-center">
+            <button type="button" id="open-agendar-modal-button" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition w-full">
+                Agendar en este Pabellón
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="agendar-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
+    <div class="modal-content bg-white w-full max-w-lg rounded-2xl shadow-2xl p-8 transform -translate-y-10">
+        <div class="flex justify-between items-start">
+            <h2 class="text-3xl font-bold text-gray-900">Agendar Reserva</h2>
+            <button id="close-agendar-modal-button" class="text-gray-400 hover:text-gray-800 text-3xl leading-none">&times;</button>
+        </div>
+        <div class="mt-6 border-t pt-6 modal-body">
+            <form id="agendar-form" class="space-y-4">
+                <input type="hidden" id="agendar-pabellon-id" name="pabellonId">
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Fecha de Reserva</label>
+                    <input type="text" id="agendar-fecha" name="fecha" class="w-full mt-1 p-2 bg-gray-100 border-gray-300 rounded-lg" readonly>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="agendar-hora-inicio" class="block text-sm font-medium text-gray-700">Hora de Inicio</label>
+                        <input type="time" id="agendar-hora-inicio" name="horaInicio" class="w-full mt-1 p-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <div>
+                        <label for="agendar-hora-termino" class="block text-sm font-medium text-gray-700">Hora de Término</label>
+                        <input type="time" id="agendar-hora-termino" name="horaTermino" class="w-full mt-1 p-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="agendar-motivo" class="block text-sm font-medium text-gray-700">Motivo de la Reserva</label>
+                    <textarea id="agendar-motivo" name="motivo" rows="3" class="w-full mt-1 p-2 border border-gray-300 rounded-lg" required placeholder="Ej: Cirugía de apendicitis"></textarea>
+                </div>
+
+                <div>
+                    <label for="agendar-comentario" class="block text-sm font-medium text-gray-700">Comentario (Opcional)</label>
+                    <textarea id="agendar-comentario" name="comentario" rows="2" class="w-full mt-1 p-2 border border-gray-300 rounded-lg" placeholder="Ej: Paciente requiere equipamiento especial"></textarea>
+                </div>
+
+                <div class="flex items-center">
+                    <input type="checkbox" id="agendar-urgencia" name="urgencia" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                    <label for="agendar-urgencia" class="ml-2 block text-sm text-gray-900">Marcar como Urgencia</label>
+                </div>
+
+                <div id="agendar-error-message" class="text-red-600 text-sm hidden p-3 bg-red-100 rounded-lg"></div>
+
+                <div class="mt-8 flex justify-end">
+                    <button type="submit" class="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition w-full">
+                        Confirmar Reserva
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const token = localStorage.getItem('authToken');
+        const username = localStorage.getItem('username');
+        const userId = localStorage.getItem('userId');
+        const API_BASE_URL = 'http://localhost:8888';
+        let pabellonesDataCache = [];
+        let currentPabellonId = null;
     <!-- ===== Contenedor Principal ===== -->
     <div class="flex flex-col min-h-screen">
         <header class="bg-white shadow-sm sticky top-0 z-40">
@@ -119,6 +267,21 @@
         const noResults = document.getElementById('no-results');
         const welcomeMsg = document.getElementById('welcome-message');
         const logoutBtn = document.getElementById('logout-button');
+
+        const detailsModal = document.getElementById('details-modal');
+        const closeDetailsModalBtn = document.getElementById('close-details-modal-button');
+        const openAgendarModalBtn = document.getElementById('open-agendar-modal-button');
+
+        const agendarModal = document.getElementById('agendar-modal');
+        const closeAgendarModalBtn = document.getElementById('close-agendar-modal-button');
+        const agendarForm = document.getElementById('agendar-form');
+        const agendarErrorMessage = document.getElementById('agendar-error-message');
+
+        const fechaInput = document.getElementById('filtro-fecha');
+        const estadoSelect = document.getElementById('filtro-estado');
+        const tipoSelect = document.getElementById('filtro-tipo');
+        const filterBtn = document.getElementById('filter-button');
+        const clearFilterBtn = document.getElementById('clear-filter-button');
         const modal = document.getElementById('details-modal');
         const closeModalBtn = document.getElementById('close-modal-button');
 
@@ -135,6 +298,81 @@
         });
 
         async function fetchAPI(endpoint, options = {}) {
+            const defaultHeaders = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            };
+            const response = await fetch(`${API_BASE_URL}/api/proxy${endpoint}`, {
+                headers: { ...defaultHeaders, ...options.headers },
+                ...options
+            });
+
+            if (response.status === 401 || response.status === 403) {
+                logoutBtn.click();
+            }
+            // Para el POST de reserva, no siempre devuelve JSON en caso de error de texto plano
+            if (!response.ok) {
+                const errorText = await response.text();
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    throw errorJson;
+                } catch (e) {
+                    throw new Error(errorText || `Error en la petición: ${response.statusText}`);
+                }
+            }
+            // Previene error si la respuesta es 200 OK pero sin cuerpo (ej. un DELETE)
+            const text = await response.text();
+            return text ? JSON.parse(text) : {};
+        }
+
+        async function fetchImageAsBlobUrl(url, token) {
+            try {
+                const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (!response.ok) {
+                    return 'https://placehold.co/400x300/fecaca/b91c1c?text=Error+Al+Cargar';
+                }
+                const blob = await response.blob();
+                return URL.createObjectURL(blob);
+            } catch (error) {
+                return 'https://placehold.co/400x300/e2e8f0/64748b?text=Sin+Conexión';
+            }
+        }
+
+        async function poblarFiltros() {
+            try {
+                const [estados, tipos] = await Promise.all([
+                    fetchAPI('/pabellones/estados'),
+                    fetchAPI('/pabellones/tipos')
+                ]);
+                estados.forEach(estado => {
+                    estadoSelect.add(new Option(estado.nombre, estado.id));
+                });
+                tipos.forEach(tipo => {
+                    tipoSelect.add(new Option(tipo.nombre, tipo.id));
+                });
+            } catch (error) {
+                console.error("Error al poblar los filtros:", error);
+            }
+        }
+
+        async function cargarPabellones() {
+            loader.classList.remove('hidden');
+            pabellonesGrid.innerHTML = '';
+            noResults.classList.add('hidden');
+            const params = new URLSearchParams({ fecha: fechaInput.value });
+            if (estadoSelect.value) params.append('estadoId', estadoSelect.value);
+            if (tipoSelect.value) params.append('tipoId', tipoSelect.value);
+
+            try {
+                const pabellones = await fetchAPI(`/pabellones/disponibles?${params.toString()}`);
+                pabellonesDataCache = pabellones;
+                renderPabellones(pabellones);
+            } catch (error) {
+                console.error("Error al cargar los pabellones:", error);
+                pabellonesGrid.innerHTML = `<p class="text-red-500 text-center col-span-full">No se pudieron cargar los datos.</p>`;
+            } finally {
+                loader.classList.add('hidden');
+            }
             const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 headers: { 'Authorization': `Bearer ${token}` },
                 ...options
@@ -149,6 +387,12 @@
 
         function renderPabellones(pabellones) {
             pabellonesGrid.innerHTML = '';
+
+            noResults.classList.toggle('hidden', pabellones.length === 0);
+            pabellones.forEach(pabellon => {
+                const estadoColor = pabellon.estado.nombre === 'Disponible' ? 'bg-green-100 text-green-800' :
+                                  pabellon.estado.nombre === 'Reservado' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
+
             noResults.classList.toggle('hidden', pabellones.length > 0);
 
             pabellones.forEach(pabellon => {
@@ -164,6 +408,9 @@
                 card.dataset.pabellonId = pabellon.id;
                 card.innerHTML = `
                     <div class="relative h-56">
+                        <img src="https://placehold.co/400x300/e2e8f0/64748b?text=Cargando..." alt="Imagen de ${pabellon.nombre}" class="w-full h-full object-cover">
+                        <div class="absolute top-3 right-3 px-3 py-1 text-xs font-semibold rounded-full ${estadoColor}">${pabellon.estado.nombre}</div>
+
                         <img src="${imageUrl}" alt="Imagen de ${pabellon.nombre}" class="w-full h-full object-cover">
                         <div class="absolute top-3 right-3 px-3 py-1 text-xs font-semibold rounded-full ${estadoColor}">
                             ${pabellon.estado.nombre}
@@ -176,6 +423,17 @@
                         <div class="mt-4 border-t pt-4 text-xs text-gray-500">
                             <p><strong>Sede:</strong> ${pabellon.sede.nombre}</p>
                         </div>
+                    </div>`;
+                pabellonesGrid.appendChild(card);
+
+                if (pabellon.imagenes && pabellon.imagenes.length > 0) {
+                    const imageUrl = `${API_BASE_URL}/api/proxy/imagenes/${pabellon.imagenes[0].rutaArchivo}`;
+                    const imgElement = card.querySelector('img');
+                    fetchImageAsBlobUrl(imageUrl, token).then(blobUrl => { imgElement.src = blobUrl; });
+                } else {
+                     card.querySelector('img').src = 'https://placehold.co/400x300/e2e8f0/64748b?text=Sin+Imagen';
+                }
+                card.addEventListener('click', () => showDetailsModal(pabellon.id));
                     </div>
                 `;
                 card.addEventListener('click', () => showDetailsModal(pabellon.id));
@@ -184,6 +442,10 @@
         }
 
         function showDetailsModal(id) {
+            currentPabellonId = id;
+            const pabellon = pabellonesDataCache.find(p => p.id === id);
+            if (!pabellon) return;
+
             const pabellon = pabellonesDataCache.find(p => p.id === id);
             if (!pabellon) return;
             
@@ -197,6 +459,122 @@
             document.getElementById('modal-caracteristicas').textContent = pabellon.caracteristicas;
             document.getElementById('modal-referencia').textContent = pabellon.referencia;
 
+            detailsModal.classList.remove('hidden');
+            setTimeout(() => {
+                detailsModal.classList.remove('opacity-0');
+                detailsModal.querySelector('.modal-content').classList.remove('-translate-y-10');
+            }, 20);
+        }
+
+        function hideDetailsModal() {
+            detailsModal.classList.add('opacity-0');
+            detailsModal.querySelector('.modal-content').classList.add('-translate-y-10');
+            setTimeout(() => detailsModal.classList.add('hidden'), 250);
+        }
+
+        function showAgendarModal() {
+            agendarErrorMessage.classList.add('hidden');
+            agendarForm.reset();
+            document.getElementById('agendar-pabellon-id').value = currentPabellonId;
+            document.getElementById('agendar-fecha').value = fechaInput.value;
+            agendarModal.classList.remove('hidden');
+            setTimeout(() => {
+                agendarModal.classList.remove('opacity-0');
+                agendarModal.querySelector('.modal-content').classList.remove('-translate-y-10');
+            }, 20);
+        }
+
+        function hideAgendarModal() {
+            agendarModal.classList.add('opacity-0');
+            agendarModal.querySelector('.modal-content').classList.add('-translate-y-10');
+            setTimeout(() => agendarModal.classList.add('hidden'), 250);
+        }
+
+        agendarForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            agendarErrorMessage.classList.add('hidden');
+            const formData = new FormData(agendarForm);
+            const fecha = document.getElementById('agendar-fecha').value;
+            const requestBody = {
+                fechaHrInicio: `${fecha}T${formData.get('horaInicio')}:00`,
+                fechaHrTermino: `${fecha}T${formData.get('horaTermino')}:00`,
+                motivo: formData.get('motivo'),
+                urgencia: formData.get('urgencia') === 'on',
+                comentario: formData.get('comentario'),
+                pabellonId: parseInt(formData.get('pabellonId'), 10)
+            };
+
+            if (requestBody.fechaHrInicio >= requestBody.fechaHrTermino) {
+                agendarErrorMessage.textContent = 'La hora de término debe ser posterior a la hora de inicio.';
+                agendarErrorMessage.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/proxy/reservas`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                        'X-User-Id': userId
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                hideAgendarModal();
+                Swal.fire({
+                    title: '¡Reserva Creada!',
+                    text: 'Tu solicitud de reserva ha sido enviada con éxito.',
+                    icon: 'success',
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+                cargarPabellones();
+            } catch (error) {
+                const errorMessage = error.message || (typeof error === 'string' ? error : 'Error al procesar la reserva. Verifique los datos.');
+                agendarErrorMessage.textContent = errorMessage;
+                agendarErrorMessage.classList.remove('hidden');
+                console.error('Error al enviar la reserva:', error);
+            }
+        });
+
+        closeDetailsModalBtn.addEventListener('click', hideDetailsModal);
+        detailsModal.addEventListener('click', (e) => { if (e.target === detailsModal) hideDetailsModal(); });
+
+        openAgendarModalBtn.addEventListener('click', () => {
+            hideDetailsModal();
+            showAgendarModal();
+        });
+
+        closeAgendarModalBtn.addEventListener('click', hideAgendarModal);
+        agendarModal.addEventListener('click', e => { if (e.target === agendarModal) hideAgendarModal(); });
+
+        function initializePage() {
+            const hoy = new Date();
+            // Ajustar por la zona horaria de Chile (UTC-4)
+            hoy.setHours(hoy.getHours() - 4);
+            fechaInput.value = hoy.toISOString().split('T')[0];
+
+            poblarFiltros();
+            cargarPabellones();
+        }
+
+        filterBtn.addEventListener('click', cargarPabellones);
+
+        clearFilterBtn.addEventListener('click', () => {
+            const hoy = new Date();
+            hoy.setHours(hoy.getHours() - 4);
+            fechaInput.value = hoy.toISOString().split('T')[0];
+            estadoSelect.value = "";
+            tipoSelect.value = "";
+            cargarPabellones();
+        });
+
+        initializePage();
+    });
+</script>
+</body>
+</html>
             modal.classList.remove('hidden');
             setTimeout(() => { modal.classList.remove('opacity-0'); modal.querySelector('.modal-content').classList.remove('-translate-y-10'); }, 20);
         }

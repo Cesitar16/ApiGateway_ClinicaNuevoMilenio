@@ -3,14 +3,22 @@ package com.clinicanuevomilenio.ApiGateway.jwt.security;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+
+import java.util.Arrays;
+
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.http.HttpMethod;
 
@@ -19,18 +27,67 @@ import java.util.Arrays; // <-- Importación necesaria
 // Importamos las constantes estáticas de tu clase
 import static com.clinicanuevomilenio.ApiGateway.jwt.security.PublicRoutes.*;
 
+
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
 
+    // --- CADENA DE FILTROS 1: Para el Frontend (PÚBLICA) ---
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    @Order(1)
+    public SecurityFilterChain frontendFilterChain(HttpSecurity http) throws Exception {
         return http
+                // Se aplica solo a las rutas del frontend
+                .securityMatcher(
+                        "/login/**",
+                        "/VistaPrincipalMedico/**",
+                        "/solicitud-servicio/**",
+                        "/mis-reservas/**",
+                        "/reportar-incidencia/**", // <-- AÑADIDO AQUÍ
+                        "/css/**",
+                        "/js/**",
+                        "/favicon.ico"
+                )
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
+                .authorizeHttpRequests(auth -> {
+                    // Permite el acceso a todas estas rutas sin autenticación.
+                    auth.anyRequest().permitAll();
+                })
+                .build();
+    }
+
+    // --- CADENA DE FILTROS 2: Para la API (SEGURA) ---
+    @Bean
+    @Order(2)
+    public SecurityFilterChain apiFilterChain(HttpSecurity http) throws Exception {
+        return http
+
+                // Se aplica a todas las rutas de la API
+                .securityMatcher("/api/**")
+
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+
+                        // Rutas públicas de la API (login/registro)
+                        .requestMatchers("/api/auth/**").permitAll()
+
+                        // Reglas específicas de roles para el proxy
+                        .requestMatchers("/api/proxy/incidencias/**").hasAnyRole("MEDICO", "ADMINISTRATIVO") // <-- AÑADIDO AQUÍ
+                        .requestMatchers("/api/proxy/usuarios/**").hasRole("ADMINISTRATIVO")
+                        .requestMatchers(HttpMethod.GET, "/api/proxy/reservas", "/api/proxy/reservas/aprobadas/por-usuario").hasAnyRole("MEDICO", "ADMINISTRATIVO")
+                        .requestMatchers(HttpMethod.POST, "/api/proxy/reservas").hasRole("MEDICO")
+                        .requestMatchers(HttpMethod.PUT, "/api/proxy/reservas/**").hasRole("MEDICO") // Para modificar y cancelar
+                        .requestMatchers("/api/proxy/reservas/**").hasRole("ADMINISTRATIVO") // El admin puede acceder a todo lo demás de reservas
+                        .requestMatchers("/api/proxy/solicitudes/**").hasAnyRole("ADMINISTRATIVO")
+                        .requestMatchers("/api/proxy/pabellones/**").hasAnyRole("MEDICO", "ADMINISTRATIVO")
+                        .requestMatchers("/api/proxy/equipamiento/**").hasAnyRole("ADMINISTRATIVO", "MEDICO", "INSTRUMENTISTA")
+
+                        // Cualquier otra ruta de la API requiere autenticación
                         // 1. Rutas Públicas de la API
                         .requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll()
                         .requestMatchers(HttpMethod.POST, PUBLIC_POST).permitAll()
@@ -53,6 +110,8 @@ public class SecurityConfig {
                 .build();
     }
 
+
+    // --- Beans de Configuración (sin cambios) ---
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
@@ -66,6 +125,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:8888"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-User-Id"));
+        configuration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+}
         configuration.setAllowedOrigins(Arrays.asList("*")); 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));

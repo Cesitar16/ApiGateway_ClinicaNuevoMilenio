@@ -20,11 +20,20 @@ public class PabellonesProxyController {
                                              @RequestBody(required = false) String body,
                                              @RequestHeader HttpHeaders headers) {
 
-        // CAMBIO 2: La ruta a reemplazar
+        // Obtener la ruta, ej: "/filtro"
         String originalPath = request.getRequestURI().replace("/api/proxy/pabellones", "");
 
-        // CAMBIO 3: La URL del microservicio de destino (pabellones-api)
+        // --- CORRECCIÓN AQUÍ ---
+        // Obtener la cadena de consulta, ej: "estadoId=1"
+        String queryString = request.getQueryString();
+
+        // Construir la URL de destino completa
         String targetUrl = "http://localhost:8003/api/pabellones" + originalPath;
+        if (queryString != null && !queryString.isEmpty()) {
+            targetUrl += "?" + queryString; // Añadir los parámetros si existen
+        }
+        // --- FIN DE LA CORRECCIÓN ---
+
 
         HttpHeaders cleanHeaders = new HttpHeaders();
         headers.forEach((key, value) -> {
@@ -37,6 +46,7 @@ public class PabellonesProxyController {
         HttpEntity<String> entity = new HttpEntity<>(body, cleanHeaders);
 
         try {
+            // Ahora la petición a restTemplate incluye la URL con los parámetros correctos
             ResponseEntity<String> response = restTemplate.exchange(targetUrl, HttpMethod.valueOf(request.getMethod()), entity, String.class);
             return ResponseEntity.status(response.getStatusCode())
                     .contentType(MediaType.APPLICATION_JSON)
