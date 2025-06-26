@@ -10,4 +10,5 @@ public class AuthResponse {
     private String nombreUsuario;
     private String rol;  // Nombre del rol
     private String estado; // Ej: "activo", "inactivo"
+    private int userId;
 }

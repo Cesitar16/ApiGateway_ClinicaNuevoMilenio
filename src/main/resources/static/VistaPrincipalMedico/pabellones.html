@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamiento de Pabellones - Clínica Nuevo Milenio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .modal { transition: opacity 0.25s ease; }
+        .modal-content { transition: transform 0.25s ease; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader {
+            border: 4px solid rgba(0, 0, 0, .1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- ===== Contenedor Principal ===== -->
+    <div class="flex flex-col min-h-screen">
+        <header class="bg-white shadow-sm sticky top-0 z-40">
+            <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+                <a href="index.html" class="text-2xl font-bold text-blue-600">Clínica Nuevo Milenio</a>
+                <div class="flex items-center space-x-4">
+                    <span id="welcome-message" class="text-gray-600 hidden sm:block"></span>
+                    <button id="logout-button" class="flex items-center text-gray-500 hover:text-red-600 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        <span class="ml-2 hidden md:block">Cerrar Sesión</span>
+                    </button>
+                </div>
+            </nav>
+        </header>
+
+        <main class="flex-grow container mx-auto px-6 py-12">
+            <div class="text-left mb-10">
+                <h1 class="text-4xl font-bold text-gray-800">Pabellones Disponibles</h1>
+                <p class="text-gray-600 mt-2">Filtre y seleccione un pabellón para ver sus detalles o agendar.</p>
+            </div>
+
+            <!-- ===== Sección de Filtros ===== -->
+            <div class="bg-white p-6 rounded-xl shadow-md mb-10">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                    <div>
+                        <label for="filtro-estado" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Estado</label>
+                        <select id="filtro-estado" class="w-full bg-gray-100 border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Todos los estados</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="filtro-tipo" class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Tipo</label>
+                        <select id="filtro-tipo" class="w-full bg-gray-100 border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Todos los tipos</option>
+                        </select>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button id="filter-button" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-300">Filtrar</button>
+                        <button id="clear-filter-button" class="w-full bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition duration-300">Limpiar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenedor para la Grilla de Pabellones -->
+            <div id="loader-container" class="flex justify-center items-center h-64">
+                <div class="loader"></div>
+            </div>
+            <div id="pabellones-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Las tarjetas de los pabellones se insertarán aquí dinámicamente -->
+            </div>
+            <div id="no-results" class="text-center py-16 hidden">
+                <h3 class="text-xl font-semibold text-gray-700">No se encontraron pabellones</h3>
+                <p class="text-gray-500 mt-2">Intente ajustar los filtros o límpielos para ver todos los resultados.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- ===== Modal para Detalles del Pabellón ===== -->
+    <div id="details-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden opacity-0">
+        <div class="modal-content bg-white w-full max-w-2xl rounded-2xl shadow-2xl p-8 transform -translate-y-10">
+            <div class="flex justify-between items-start">
+                <h2 id="modal-title" class="text-3xl font-bold text-gray-900"></h2>
+                <button id="close-modal-button" class="text-gray-400 hover:text-gray-800 text-3xl leading-none">&times;</button>
+            </div>
+            <div class="mt-6 border-t pt-6">
+                <p id="modal-description" class="text-gray-600 mb-4"></p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                    <div><strong>Sede:</strong> <span id="modal-sede"></span></div>
+                    <div><strong>Edificio:</strong> <span id="modal-edificio"></span></div>
+                    <div><strong>Piso:</strong> <span id="modal-piso"></span></div>
+                    <div><strong>Capacidad:</strong> <span id="modal-capacidad"></span></div>
+                    <div class="md:col-span-2"><strong>Tipo:</strong> <span id="modal-tipo"></span></div>
+                    <div class="md:col-span-2"><strong>Características:</strong> <span id="modal-caracteristicas"></span></div>
+                    <div class="md:col-span-2"><strong>Referencia:</strong> <span id="modal-referencia"></span></div>
+                </div>
+            </div>
+            <div class="mt-8 flex justify-end">
+                <button class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition">Agendar en este Pabellón</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const token = localStorage.getItem('authToken');
+        const username = localStorage.getItem('username');
+        const API_BASE_URL = 'http://localhost:8888';
+        let pabellonesDataCache = []; // Caché para los datos de los pabellones
+
+        const pabellonesGrid = document.getElementById('pabellones-grid');
+        const loader = document.getElementById('loader-container');
+        const noResults = document.getElementById('no-results');
+        const welcomeMsg = document.getElementById('welcome-message');
+        const logoutBtn = document.getElementById('logout-button');
+        const modal = document.getElementById('details-modal');
+        const closeModalBtn = document.getElementById('close-modal-button');
+
+        if (!token) {
+            window.location.href = '../login/index.html';
+            return;
+        }
+        if (welcomeMsg && username) {
+            welcomeMsg.textContent = `Bienvenido/a, ${username}`;
+        }
+        logoutBtn.addEventListener('click', () => {
+            localStorage.clear();
+            window.location.href = '../login/index.html';
+        });
+
+        async function fetchAPI(endpoint, options = {}) {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+                ...options
+            });
+            if (response.status === 401 || response.status === 403) {
+                logoutBtn.click();
+                return;
+            }
+            if (!response.ok) throw new Error(`Error en la petición: ${response.statusText}`);
+            return response.json();
+        }
+
+        function renderPabellones(pabellones) {
+            pabellonesGrid.innerHTML = '';
+            noResults.classList.toggle('hidden', pabellones.length > 0);
+
+            pabellones.forEach(pabellon => {
+                const estadoColor = pabellon.estado.nombre === 'Disponible' ? 'bg-green-100 text-green-800' : 
+                                  pabellon.estado.nombre === 'Reservado' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
+                
+                const imageUrl = pabellon.imagenes && pabellon.imagenes.length > 0 
+                                ? `${API_BASE_URL}/api/proxy/imagenes/${pabellon.imagenes[0].rutaArchivo}`
+                                : 'https://placehold.co/400x300/e2e8f0/64748b?text=Sin+Imagen';
+
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-2xl shadow-md overflow-hidden transform hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col';
+                card.dataset.pabellonId = pabellon.id;
+                card.innerHTML = `
+                    <div class="relative h-56">
+                        <img src="${imageUrl}" alt="Imagen de ${pabellon.nombre}" class="w-full h-full object-cover">
+                        <div class="absolute top-3 right-3 px-3 py-1 text-xs font-semibold rounded-full ${estadoColor}">
+                            ${pabellon.estado.nombre}
+                        </div>
+                    </div>
+                    <div class="p-6 flex-grow flex flex-col">
+                        <h3 class="text-xl font-bold text-gray-800">${pabellon.nombre}</h3>
+                        <p class="text-sm text-gray-500 mt-1">${pabellon.tipoPabellon.nombre}</p>
+                        <p class="text-sm text-gray-600 mt-3 flex-grow">${pabellon.descripcion}</p>
+                        <div class="mt-4 border-t pt-4 text-xs text-gray-500">
+                            <p><strong>Sede:</strong> ${pabellon.sede.nombre}</p>
+                        </div>
+                    </div>
+                `;
+                card.addEventListener('click', () => showDetailsModal(pabellon.id));
+                pabellonesGrid.appendChild(card);
+            });
+        }
+
+        function showDetailsModal(id) {
+            const pabellon = pabellonesDataCache.find(p => p.id === id);
+            if (!pabellon) return;
+            
+            document.getElementById('modal-title').textContent = pabellon.nombre;
+            document.getElementById('modal-description').textContent = pabellon.descripcion;
+            document.getElementById('modal-sede').textContent = `${pabellon.sede.nombre}, ${pabellon.sede.comuna.nombre}`;
+            document.getElementById('modal-edificio').textContent = pabellon.edificio;
+            document.getElementById('modal-piso').textContent = pabellon.piso;
+            document.getElementById('modal-capacidad').textContent = `${pabellon.capacidad} personas`;
+            document.getElementById('modal-tipo').textContent = pabellon.tipoPabellon.nombre;
+            document.getElementById('modal-caracteristicas').textContent = pabellon.caracteristicas;
+            document.getElementById('modal-referencia').textContent = pabellon.referencia;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); modal.querySelector('.modal-content').classList.remove('-translate-y-10'); }, 20);
+        }
+
+        closeModalBtn.addEventListener('click', () => {
+            modal.classList.add('opacity-0');
+            modal.querySelector('.modal-content').classList.add('-translate-y-10');
+            setTimeout(() => modal.classList.add('hidden'), 250);
+        });
+
+        async function initializePage() {
+            try {
+                const pabellones = await fetchAPI('/api/proxy/pabellones');
+                pabellonesDataCache = pabellones;
+                renderPabellones(pabellones);
+            } catch (error) {
+                console.error("Error al cargar los pabellones:", error);
+                pabellonesGrid.innerHTML = `<p class="text-red-500 text-center col-span-full">No se pudieron cargar los datos.</p>`;
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+        
+        initializePage();
+    });
+    </script>
+</body>
+</html>

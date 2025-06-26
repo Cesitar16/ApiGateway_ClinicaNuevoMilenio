@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportar Incidencia - Clínica Nuevo Milenio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+<div class="flex flex-col min-h-screen">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="../VistaPrincipalMedico/index.html" class="text-2xl font-bold text-blue-600">Clínica Nuevo Milenio</a>
+            <div class="flex items-center space-x-4">
+                <span id="welcome-message" class="text-gray-600 hidden sm:block"></span>
+                <button id="logout-button" class="flex items-center text-gray-500 hover:text-red-600 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    <span class="ml-2 hidden md:block">Cerrar Sesión</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="flex-grow container mx-auto px-6 py-12">
+        <div class="max-w-3xl mx-auto">
+            <div class="text-left mb-10">
+                <h1 class="text-4xl font-bold text-gray-800">Reportar Incidencia</h1>
+                <p class="text-gray-600 mt-2">Utilice este formulario para reportar cualquier problema o falla.</p>
+            </div>
+
+            <form id="incidencia-form" class="bg-white p-8 rounded-2xl shadow-md space-y-6">
+                <div>
+                    <label for="pabellon" class="block text-sm font-medium text-gray-700">Pabellón afectado (*)</label>
+                    <select id="pabellon" name="pabellonId" class="w-full mt-1 p-2 bg-gray-100 border-gray-300 rounded-lg" required></select>
+                </div>
+
+                <div id="equipamiento-container">
+                    <label for="equipamiento" class="block text-sm font-medium text-gray-700">Equipamiento afectado (Opcional)</label>
+                    <select id="equipamiento" name="equipamientoId" class="w-full mt-1 p-2 bg-gray-100 border-gray-300 rounded-lg">
+                        <option value="">-- Primero seleccione un pabellón --</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="tipo-incidencia" class="block text-sm font-medium text-gray-700">Tipo de Incidencia (*)</label>
+                    <select id="tipo-incidencia" name="tipoIncidenciaId" class="w-full mt-1 p-2 bg-gray-100 border-gray-300 rounded-lg" required></select>
+                </div>
+
+                <div>
+                    <label for="descripcion" class="block text-sm font-medium text-gray-700">Descripción detallada de la incidencia (*)</label>
+                    <textarea id="descripcion" name="descripcion" rows="5" class="w-full mt-1 p-2 border border-gray-300 rounded-lg" required placeholder="Ej: El monitor de signos vitales no enciende al conectarlo. Se probó en otro enchufe sin éxito."></textarea>
+                </div>
+
+                <div id="form-error-message" class="text-red-600 text-sm hidden p-3 bg-red-100 rounded-lg"></div>
+
+                <div class="pt-4">
+                    <button type="submit" class="w-full bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700 transition">
+                        Enviar Reporte de Incidencia
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const token = localStorage.getItem('authToken');
+        const userId = localStorage.getItem('userId');
+        const username = localStorage.getItem('username');
+        const API_BASE_URL = 'http://localhost:8888';
+
+        if (!token || !userId) {
+            window.location.href = '../login/index.html';
+            return;
+        }
+
+        const welcomeMsg = document.getElementById('welcome-message');
+        const logoutBtn = document.getElementById('logout-button');
+        if (welcomeMsg && username) welcomeMsg.textContent = `Bienvenido/a, ${username}`;
+        logoutBtn.addEventListener('click', () => { localStorage.clear(); window.location.href = '../login/index.html'; });
+
+        const form = document.getElementById('incidencia-form');
+        const pabellonSelect = document.getElementById('pabellon');
+        const equipamientoSelect = document.getElementById('equipamiento');
+        const tipoIncidenciaSelect = document.getElementById('tipo-incidencia');
+        const errorMessageDiv = document.getElementById('form-error-message');
+
+        // --- FUNCIÓN fetchAPI MEJORADA ---
+        // Ahora incluye el X-User-Id en todas las peticiones por defecto
+        async function fetchAPI(endpoint, options = {}) {
+            const defaultHeaders = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                'X-User-Id': userId
+            };
+            const config = {
+                ...options,
+                headers: { ...defaultHeaders, ...options.headers }
+            };
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ message: 'Error desconocido del servidor' }));
+                throw errorData;
+            }
+            const text = await response.text();
+            return text ? JSON.parse(text) : {};
+        }
+
+        // --- FUNCIÓN PARA POBLAR SELECTS ACTUALIZADA ---
+        async function poblarSelectsIniciales() {
+            try {
+                // Se llama al nuevo endpoint de reservas aprobadas y al de tipos de incidencia
+                const [reservasAprobadas, tiposIncidencia] = await Promise.all([
+                    fetchAPI('/api/proxy/reservas/aprobadas/por-usuario'),
+                    fetchAPI('/api/proxy/incidencias/tipos')
+                ]);
+
+                // Lógica para poblar el select de pabellones sin duplicados
+                pabellonSelect.innerHTML = '<option value="">-- Seleccione un Pabellón --</option>';
+                const pabellonesUnicos = new Map();
+                reservasAprobadas.forEach(reserva => {
+                    if (reserva.pabellon && !pabellonesUnicos.has(reserva.pabellon.id)) {
+                        pabellonesUnicos.set(reserva.pabellon.id, reserva.pabellon.nombre);
+                    }
+                });
+
+                if (pabellonesUnicos.size === 0) {
+                    pabellonSelect.innerHTML = '<option value="">-- No tienes pabellones con reservas aprobadas --</option>';
+                } else {
+                    pabellonesUnicos.forEach((nombre, id) => {
+                        pabellonSelect.add(new Option(nombre, id));
+                    });
+                }
+
+                // Lógica para poblar los tipos de incidencia (sin cambios)
+                tipoIncidenciaSelect.innerHTML = '<option value="">-- Seleccione un Tipo de Incidencia --</option>';
+                tiposIncidencia.forEach(t => tipoIncidenciaSelect.add(new Option(t.nombre, t.id)));
+
+            } catch (error) {
+                console.error('Error al poblar los selectores:', error);
+                errorMessageDiv.textContent = 'No se pudieron cargar los datos para el formulario.';
+                errorMessageDiv.classList.remove('hidden');
+            }
+        }
+
+        async function cargarEquipamientoPorPabellon() {
+            const pabellonId = pabellonSelect.value;
+            equipamientoSelect.innerHTML = '<option value="">Cargando...</option>';
+            if (!pabellonId) {
+                equipamientoSelect.innerHTML = '<option value="">-- Primero seleccione un pabellón --</option>';
+                return;
+            }
+            try {
+                const stock = await fetchAPI(`/api/proxy/equipamiento/stock/pabellon/${pabellonId}`);
+                equipamientoSelect.innerHTML = '<option value="">-- Opcional: Ninguno --</option>';
+                stock.forEach(item => equipamientoSelect.add(new Option(item.equipamiento.nombre, item.equipamiento.id)));
+            } catch (error) {
+                console.error('Error al cargar equipamiento:', error);
+                equipamientoSelect.innerHTML = '<option value="">-- Sin equipamiento o error --</option>';
+            }
+        }
+
+        pabellonSelect.addEventListener('change', cargarEquipamientoPorPabellon);
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            errorMessageDiv.classList.add('hidden');
+
+            const formData = new FormData(form);
+            const requestBody = {
+                pabellonId: parseInt(formData.get('pabellonId')),
+                tipoIncidenciaId: parseInt(formData.get('tipoIncidenciaId')),
+                descripcion: formData.get('descripcion'),
+                equipamientoId: formData.get('equipamientoId') ? parseInt(formData.get('equipamientoId')) : null
+            };
+
+            try {
+                // La llamada a fetchAPI ya no necesita pasar el X-User-Id manualmente
+                await fetchAPI('/api/proxy/solicitudes/incidencias', {
+                    method: 'POST',
+                    body: JSON.stringify(requestBody)
+                });
+
+                Swal.fire({
+                    title: '¡Incidencia Reportada!',
+                    text: 'El reporte ha sido enviado y se ha generado una solicitud de servicio.',
+                    icon: 'success',
+                    timer: 3000,
+                    showConfirmButton: false
+                }).then(() => {
+                    window.location.href = '../VistaPrincipalMedico/index.html';
+                });
+
+            } catch (error) {
+                errorMessageDiv.textContent = error.message || 'Ocurrió un error al enviar el reporte.';
+                errorMessageDiv.classList.remove('hidden');
+            }
+        });
+
+        poblarSelectsIniciales();
+    });
+</script>
+</body>
+</html>
