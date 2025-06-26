@@ -81,6 +81,8 @@ public class SecurityConfig {
                                 "/VistaPrincipalMedico/**",
                                 // --- RUTA CORREGIDA ---
                                 "/VistaPrincipalJefeDePabellon/**", // Permite acceso a todo dentro de esta carpeta
+                                "/gestion-servicios/**",      // <-- Nueva vista de gestión
+                                "/VistaJefeServicios/**",
                                 "/api/auth/**"
                         ).permitAll()
 =======
