@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Reservas - Clínica Nuevo Milenio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+<div class="flex flex-col min-h-screen">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#" class="text-2xl font-bold text-blue-600">Clínica Nuevo Milenio</a>
+            <div class="flex items-center space-x-4">
+                <span id="welcome-message" class="text-gray-600 hidden sm:block"></span>
+                <button id="logout-button" class="flex items-center text-gray-500 hover:text-red-600 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                    <span class="ml-2 hidden md:block">Cerrar Sesión</span>
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="flex-grow container mx-auto px-6 py-12">
+        <div class="text-left mb-10">
+            <h1 class="text-4xl font-bold text-gray-800">Gestión de Solicitudes de Reserva</h1>
+            <p class="text-gray-600 mt-2">Revisa, aprueba o rechaza las solicitudes pendientes.</p>
+        </div>
+
+        <div id="loader" class="text-center py-16">
+            <p class="text-gray-600">Cargando solicitudes pendientes...</p>
+        </div>
+
+        <div id="no-pendientes" class="text-center py-16 hidden">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h3 class="mt-2 text-xl font-semibold text-gray-700">No hay solicitudes pendientes</h3>
+            <p class="mt-1 text-gray-500">Buen trabajo, todo está al día.</p>
+        </div>
+
+        <div id="tabla-container" class="bg-white rounded-xl shadow-md overflow-x-auto hidden">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Solicitante</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pabellón</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha y Hora</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Motivo</th>
+                    <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                </tr>
+                </thead>
+                <tbody id="reservas-pendientes-tbody" class="bg-white divide-y divide-gray-200">
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const token = localStorage.getItem('authToken');
+        const userId = localStorage.getItem('userId');
+        const username = localStorage.getItem('username');
+        const userRole = localStorage.getItem('userRole');
+        const API_BASE_URL = 'http://localhost:8888';
+
+        // Protección de la ruta por rol
+        if (!token || !userId || !['JEFE DE PABELLON', 'ADMINISTRATIVO'].includes(userRole.toUpperCase())) {
+            alert('Acceso no autorizado.');
+            window.location.href = '../login/index.html';
+            return;
+        }
+
+        const welcomeMsg = document.getElementById('welcome-message');
+        const logoutBtn = document.getElementById('logout-button');
+        const loader = document.getElementById('loader');
+        const noPendientesMsg = document.getElementById('no-pendientes');
+        const tablaContainer = document.getElementById('tabla-container');
+        const tbody = document.getElementById('reservas-pendientes-tbody');
+
+        if (welcomeMsg && username) welcomeMsg.textContent = `Bienvenido/a, ${username}`;
+        logoutBtn.addEventListener('click', () => { localStorage.clear(); window.location.href = '../login/index.html'; });
+
+        function formatDateTime(dateTimeString) {
+            const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+            return new Date(dateTimeString).toLocaleString('es-CL', options);
+        }
+
+        async function procesarSolicitud(reservaId, accion) {
+            const esAprobar = accion === 'aprobar';
+            const result = await Swal.fire({
+                title: `¿Estás seguro de ${esAprobar ? 'aprobar' : 'rechazar'} esta solicitud?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: esAprobar ? '#3085d6' : '#d33',
+                cancelButtonColor: '#aaa',
+                confirmButtonText: `Sí, ${esAprobar ? 'aprobar' : 'rechazar'}`,
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/proxy/reservas/${reservaId}/${accion}`, {
+                        method: 'PUT',
+                        headers: { 'Authorization': `Bearer ${token}`, 'X-User-Id': userId }
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.message || 'La operación no pudo ser completada.');
+                    }
+                    Swal.fire('¡Éxito!', `La solicitud ha sido ${esAprobar ? 'aprobada' : 'rechazada'}.`, 'success');
+                    cargarReservasPendientes();
+                } catch (error) {
+                    Swal.fire('Error', error.message, 'error');
+                }
+            }
+        }
+
+        function renderTabla(reservas) {
+            tbody.innerHTML = '';
+            reservas.forEach(reserva => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${reserva.usuario.nombreCompleto || reserva.usuario.username}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">${reserva.pabellon.nombre}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">${formatDateTime(reserva.fechaHrInicio)}</div>
+                        <div class="text-sm text-gray-500">hasta ${formatDateTime(reserva.fechaHrTermino)}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="text-sm text-gray-900 max-w-xs truncate" title="${reserva.motivo}">${reserva.motivo}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center text-sm font-medium space-x-2">
+                        <button data-id="${reserva.id}" class="approve-btn text-white bg-green-600 hover:bg-green-700 px-3 py-1 rounded-md">Aprobar</button>
+                        <button data-id="${reserva.id}" class="reject-btn text-white bg-red-600 hover:bg-red-700 px-3 py-1 rounded-md">Rechazar</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function cargarReservasPendientes() {
+            loader.classList.remove('hidden');
+            tablaContainer.classList.add('hidden');
+            noPendientesMsg.classList.add('hidden');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/proxy/reservas/pendientes`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Error al cargar las solicitudes pendientes.');
+
+                const reservas = await response.json();
+
+                if (reservas.length === 0) {
+                    noPendientesMsg.classList.remove('hidden');
+                } else {
+                    renderTabla(reservas);
+                    tablaContainer.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                tablaContainer.innerHTML = '<tr><td colspan="5" class="text-center text-red-500 p-4">No se pudieron cargar los datos.</td></tr>';
+                tablaContainer.classList.remove('hidden');
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        tbody.addEventListener('click', (event) => {
+            const target = event.target;
+            if (target.classList.contains('approve-btn')) {
+                procesarSolicitud(target.dataset.id, 'aprobar');
+            }
+            if (target.classList.contains('reject-btn')) {
+                procesarSolicitud(target.dataset.id, 'rechazar');
+            }
+        });
+
+        cargarReservasPendientes();
+    });
+</script>
+</body>
+</html>
