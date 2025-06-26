@@ -58,6 +58,13 @@ if (loginForm) {
 
                 // --- LÓGICA DE REDIRECCIÓN CORREGIDA ---
                 const userRole = data.rol.toUpperCase();
+                   // --- AÑADE ESTA LÍNEA OBLIGATORIAMENTE ---
+                   localStorage.setItem('userId', data.userId);
+                
+                // Guardamos los datos en el almacenamiento local
+                localStorage.setItem('authToken', data.token);
+                localStorage.setItem('username', data.nombreUsuario);
+                localStorage.setItem('userRole', data.rol);
 
                 if (userRole === 'MEDICO') {
                     window.location.href = '../VistaPrincipalMedico/index.html';
